@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+
+env/
+build/
+*.egg-info/
+
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Sphinx documentation
+docs/_build/
