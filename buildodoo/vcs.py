@@ -6,5 +6,9 @@ commands = {
     'revno': {
         'bzr': 'bzr revno',
         'git': 'git rev-parse HEAD',
-    }
+    },
+    'status': {
+        'bzr': 'bzr status',
+        'git': 'git status -s',
+    },
 }

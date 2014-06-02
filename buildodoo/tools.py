@@ -31,6 +31,8 @@ def command(cmd, name, repo, subdir='.', multilines=False):
         local('mkdir -p %s' % dst)
         with lcd(dst):
             out = local(cmd % args, capture=True)
+            if out:
+                print out
             with lcd(subdir):
                 path = local('pwd', capture=True)
                 return path, args['repo'], out
@@ -78,3 +80,6 @@ def freeze():
     for result in project('revno'):
         path, repo, revno = result
         print '%s = %s' % (repo, revno)
+
+def status():
+    project('status')
