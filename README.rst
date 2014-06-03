@@ -26,15 +26,13 @@ Edit ``fabfile.py``. Example::
 Edit ``instance.cfg``. Example::
 
   [instance]
-  # <server | addons> = <repo name> <[<path added to addons_path>]>
   server = server
   addons = 7.0 [.]
            web [addons]
            pentaho-reports [openerp_addon]  ; add subdir 'openerp_addon' to addons_path
-           custom [..]  ; grouping of multiple standalone addons is possible, add 'custom' to addons_path
+           custom [.]  ; grouping of multiple standalone addons is possible, add 'custom' to addons_path
 
   [repo]
-  # <name> = <target> <[protocol]>
   server = ~/Work/lp/openobject-server/7.0 [bzr]
   7.0 = ~/Work/lp/openobject-addons/7.0 [bzr]
   web = ~/Work/lp/openerp-web/7.0 [bzr]
@@ -43,14 +41,15 @@ Edit ``instance.cfg``. Example::
            ~/Work/lp/custom/hr_employment [bzr]
            ~/Work/lp/custom/hr_work_day [bzr]
            
-Lastly, init the project like this::
+  [revisions]
+  ~/Work/lp/openerp-web/7.0 = last:1
+           
+Lastly, checkout the project like this::
 
-  $ fab init
+  $ fab checkout --show=debug
 
-This will create a new instance in ``instance`` directory and create/overwrite ``instance.openerp.cfg`` with addons_path.
+This will create a new instance in ``instance`` directory and print complete ``addons_path`` to the console.
   
-To freeze a project::
+To display revisions of all checkouts::
 
-  $ fab freeze
-  
-This will simply print out revision numbers/hashes of the server and all the defined addons.
+  $ fab revno --show=debug
