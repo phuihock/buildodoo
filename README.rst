@@ -46,10 +46,16 @@ Edit ``instance.cfg``. Example::
            
 Lastly, checkout the project like this::
 
-  $ fab checkout --show=debug
+  $ fab checkout
 
 This will create a new instance in ``instance`` directory and print complete ``addons_path`` to the console.
   
 To display revisions of all checkouts::
 
-  $ fab revno --show=debug
+  $ fab revno
+  
+To prepare the project for deployment::
+  
+  $ fab export
+  
+This will export the current project to ``build/instance`` directory.
