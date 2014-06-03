@@ -6,7 +6,7 @@ an itch.
 
 WARNING
 -------
-This is still very much experimental. If you need a mature project to work with, checkout `anybox.reciple.buildout <http://docs.anybox.fr/anybox.recipe.openerp/trunk>`_
+This is still very much experimental. If you need a mature project to work with, checkout `anybox.recipe.buildout <http://docs.anybox.fr/anybox.recipe.openerp/trunk>`_
 recipe.
 
 INSTALLATION
