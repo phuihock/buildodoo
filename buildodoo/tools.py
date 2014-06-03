@@ -1,85 +1,122 @@
 from fabric.contrib.console import confirm
-from fabric.api import *
-
+from fabric.state import output
 import ConfigParser
-import re
+import fabric.api
 import os
+import re
 import vcs
 
+SPEC = re.compile("(.*?)(\[(.*)\])?$")
+
 config = ConfigParser.ConfigParser()
-config.read('instance.cfg')
-spec = re.compile("(.*?)(\[(.*)\])?$")
+cfg = 'instance.cfg'
+if os.path.isfile(cfg):
+    config.read(cfg)
 
-def command(cmd, name, repo, subdir='.', multilines=False):
-    mo = spec.match(repo)
+addons_path = []
+def addons_path_adder(path):
+    addons_path.append(path)
+
+def process_repo(op, repo_name, repo_spec, stack, collector=None, multiline=False):
+    mo = SPEC.match(repo_spec)
     if mo:
-        g1, g2, g3 = [g.strip() for g in mo.groups()]
-        args = {
-            'repo': g1,
-            'rev': '',
-        }
+        target, _, protocol = [g.strip() for g in mo.groups()]
 
-        if config.has_option('revisions', name):
-            revno = config.get('revisions', name)
-            args['rev'] = '-r ' + revno
+    params = {
+        'repo': target,
+        'rev': '',
+    }
 
-        cmd = vcs.commands[cmd][g3]
-        if multilines:
-            dst = os.path.join(name, os.path.basename(g1))
-        else:
-            dst = name
-        local('mkdir -p %s' % dst)
-        with lcd(dst):
-            out = local(cmd % args, capture=True)
+    if config.has_option('revisions', target):
+        rev = config.get('revisions', target)
+        params['rev'] = '-r ' + rev
+
+    cmd = vcs.commands[op]
+    if multiline:
+        repo_name = os.path.join(repo_name, os.path.basename(target))
+        stack.append(('local', 'mkdir -p ' + repo_name))
+
+    stack.append((('lcd', repo_name), ('local', 'pwd', collector), ('local', cmd[protocol] % params, collector)))
+
+def _process_server(op, name='instance', collector=None):
+    stack = []
+    stack.append(('local', 'mkdir -p server'))
+    repo_name = config.get(name, 'server')
+    repo_spec = config.get('repo', repo_name)
+    process_repo(op, repo_name, repo_spec, stack, collector=collector)
+    return stack
+
+def _process_addons(op, name='instance', collector=None):
+    stack = []
+    stack.append(('local', 'mkdir -p addons'))
+    stack.append(('lcd', 'addons'))
+    addons = config.get(name, 'addons')
+    for addon_spec in addons.splitlines():
+        mo = SPEC.match(addon_spec)
+        addon_name, _, subdir = [g.strip() for g in mo.groups()]
+        dest = os.path.normpath(os.path.join(addon_name, subdir))
+        stack.append(('local', 'mkdir -p ' + addon_name))
+        repos = config.get('repo', addon_name)
+
+        repo_spec = [l for l in repos.splitlines() if l]
+        multiline = len(repo_spec) > 1
+        for spec in repo_spec:
+            process_repo(op, addon_name, spec, stack, collector=collector, multiline=multiline)
+        stack.append((('lcd', dest), ('local', 'pwd', addons_path_adder)))
+    return stack
+
+def _process(op, name='instance'):
+    buf = []
+    def collector(out):
+        buf.append(out)
+
+    s1 = _process_server(op, name, collector)
+    s2 = _process_addons(op, name, collector)
+    _exec((('local', 'mkdir -p %s' % name), ('lcd', name), s1, s2), fabric.api)
+    _print_captured(buf, op)
+    return buf
+
+def _do(f, ctx):
+    func = getattr(ctx, f[0])
+    if len(f) == 3 and hasattr(f[2], '__call__'):
+        out = func(f[1], capture=True)
+        f[2](out)
+    else:
+        out = func(f[1])
+    return out
+
+def _exec(stack, ctx):
+    for i, f in enumerate(stack):
+        if isinstance(f, (tuple, list)):
+            if isinstance(f[0], str):
+                out = _do(f, ctx)
+                if out and hasattr(out, '__enter__'):
+                    with out:
+                        _exec(stack[i + 1:], ctx)
+                    break
+            else:
+                _exec(f, ctx)
+
+def _parse_captured(buf):
+    groups = []
+    for i in xrange(0, len(buf), 2):
+        groups.append((buf[i], buf[i+1]))
+    return groups
+
+def _print_captured(buf, op):
+    if output.debug:
+        groups = _parse_captured(buf)
+        for g in groups:
+            print '[%s] location: %s' % (op, g[0])
+            out = g[1]
             if out:
-                print out
-            with lcd(subdir):
-                path = local('pwd', capture=True)
-                return path, args['repo'], out
+                print '[%s] %s' % (op, out)
 
-def project(cmd):
-    outputs = []
-    local('mkdir -p instance')
-
-    with lcd('instance'):
-        server_repo = config.get('instance', 'server')
-        result = command(cmd, 'server', config.get('repo', server_repo))
-        outputs.append(result)
-
-        local('mkdir -p addons')
-        with lcd('addons'):
-            addons = config.get('instance', 'addons')
-            for addon in addons.splitlines():
-                mo = spec.match(addon)
-                if mo:
-                    g1, g2, g3 = [g.strip() for g in mo.groups()]
-                    name, subdir = g1, g3
-                    bundle = config.get('repo', name).splitlines()
-                    for r in bundle:
-                        result = command(cmd, name, r, subdir, len(bundle) > 1)
-                        outputs.append(result)
-    return outputs
-
-def init():
-    with settings(warn_only=True):
-        if not local('test -d instance').failed:
-            local('mv instance instance_$(date +%Y%m%d.%H%M%S)')
-
-        addons_path = []
-        for result in project('checkout'):
-            path, repo, out = result
-            if path not in addons_path:
-                addons_path.append(path)
-
-        with open('openerp.instance.cfg', 'w') as f:
-            f.write("""[options]
-addons_path = %s""" % ','.join(addons_path))
-
-
-def freeze():
-    for result in project('revno'):
-        path, repo, revno = result
-        print '%s = %s' % (repo, revno)
+def checkout():
+    _process('checkout')
 
 def status():
-    project('status')
+    _process('status')
+
+def revno():
+    _process('revno')

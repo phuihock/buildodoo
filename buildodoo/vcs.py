@@ -1,4 +1,8 @@
 commands = {
+    'noop': {
+        'bzr': 'true',
+        'git': 'true',
+    },
     'checkout': {
         'bzr': 'bzr checkout --lightweight %(repo)s . %(rev)s',
         'git': 'git clone %(repo)s . %(rev)s',
