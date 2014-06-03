@@ -21,7 +21,7 @@ USAGE
 -----
 Edit ``fabfile.py``. Example::
 
-  from buildodoo.tools import init, freeze
+  from buildodoo.tools import checkout, status, revno, export
 
 Edit ``instance.cfg``. Example::
 
