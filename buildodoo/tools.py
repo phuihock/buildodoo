@@ -129,6 +129,9 @@ def checkout():
     if not abort:
         local('rm -rf instance')
         _process('checkout')
+        with open('instance.addons.cfg', 'w') as f:
+            f.write("""[options]
+addons_path = %s""" % ','.join(addons_path))
 
 def status():
     _process('status')
