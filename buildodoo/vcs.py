@@ -8,7 +8,7 @@ commands = {
         'git': 'git clone %(repo)s . %(rev)s',
     },
     'revno': {
-        'bzr': 'bzr revno',
+        'bzr': 'bzr revno --tree',
         'git': 'git rev-parse HEAD',
     },
     'status': {
