@@ -1,5 +1,6 @@
 from fabric.api import local
 from fabric.contrib.console import confirm
+from fabric.utils import warn
 import ConfigParser
 import fabric.api
 import os
@@ -28,6 +29,7 @@ def process_repo(op, name, repo_name, repo_spec, stack, collector=None, multilin
     mo = SPEC.match(repo_spec)
     if mo:
         repo, _, protocol = [g.strip() for g in mo.groups()]
+        repo = os.path.join(ROOT, repo)
 
     if config.has_option('revisions', repo):
         rev = config.get('revisions', repo)
@@ -65,13 +67,16 @@ def _process_addons(op, name='instance', collector=None):
         addon_name, _, subdir = [g.strip() for g in mo.groups()]
         dest = os.path.normpath(os.path.join(addon_name, subdir))
         stack.append(('local', 'mkdir -p ' + addon_name))
-        repos = config.get('repo', addon_name)
-
-        repo_spec = [l for l in repos.splitlines() if l]
-        multiline = len(repo_spec) > 1
-        for spec in repo_spec:
-            process_repo(op, name, addon_name, spec, stack, collector=collector, multiline=multiline)
-        stack.append((('lcd', dest), ('local', 'pwd', addons_path_adder)))
+        if not config.has_option('repo', addon_name):
+            warn("'%s' is not found in section 'repo', but added to addons_path anyway." % addon_name)
+            addons_path_adder(None, os.path.join(ROOT, dest))
+        else:
+            repos = config.get('repo', addon_name)
+            repo_spec = [l for l in repos.splitlines() if l]
+            multiline = len(repo_spec) > 1
+            for spec in repo_spec:
+                process_repo(op, name, addon_name, spec, stack, collector=collector, multiline=multiline)
+            stack.append((('lcd', dest), ('local', 'pwd', addons_path_adder)))
     return stack
 
 def _process(op, name='instance'):
