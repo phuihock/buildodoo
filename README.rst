@@ -43,7 +43,7 @@ Edit ``instance.cfg``. Example::
            ../custom/hr_work_day [bzr]
            
   [revisions]
-  ~/Work/lp/openerp-web/7.0 = last:1
+  ../openerp-web/7.0 = last:1
            
 Lastly, checkout the project like this::
 
