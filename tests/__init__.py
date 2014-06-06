@@ -4,9 +4,10 @@ import ConfigParser
 import io
 import shutil
 import os
+import subprocess
 
 
-ROOT = os.path.normpath('..')
+ROOT = os.path.abspath('.')
 
 def assert_stack_eq(frame, a, msg=None):
     parsed_tree = []
@@ -55,7 +56,7 @@ server = %(repo)s [git]
 one = %(repo)s [git]
 
 [revisions]
-%(repo)s = 1
+%(repo)s = e3224b1
 """ % {'repo': ROOT}))
 
 
@@ -74,28 +75,54 @@ two = %(repo)s [git]
 """ % {'repo': ROOT}))
 
 
+def _arbitrary_addon_cfg():
+    tools.config = ConfigParser.ConfigParser()
+    tools.config.readfp(io.BytesIO("""
+[instance]
+server = server
+addons = tests [addons]
+
+[repo]
+server = %(repo)s [git]
+""" % {'repo': ROOT}))
+
+def _prepare():
+    shutil.rmtree('instance', True)
+
+def _cleanup():
+    shutil.rmtree('instance', True)
+
+@t.with_setup(_prepare, _cleanup)
 @t.with_setup(_basic_cfg)
 def test_instance_server():
-    stack = tools._process_server('checkout')
-    assert_stack_eq(stack[-1], [('lcd', 'server'), ('local', 'pwd'), ('local', 'git clone .. . ')])
+    tools._process('checkout')
+    assert os.path.exists('instance/server/EXISTS')
 
 
+@t.with_setup(_prepare, _cleanup)
 @t.with_setup(_single_addon_cfg)
 def test_single_addon():
-    stack = tools._process_addons('checkout')
-    assert_stack_eq(stack[-2], [('lcd', 'one'), ('local', 'pwd'), ('local', 'git clone .. . ')])
-    assert_stack_eq(stack[-1], [('lcd', 'one'), ('local', 'pwd', 'addons_path_adder')])
+    tools._process('checkout')
+    assert os.path.exists('instance/addons/one/EXISTS')
 
 
+@t.with_setup(_prepare, _cleanup)
 @t.with_setup(_single_addon_rev_cfg)
 def test_single_addon_rev():
-    stack = tools._process_addons('checkout')
-    assert_stack_eq(stack[-2], [('lcd', 'one'), ('local', 'pwd'), ('local', 'git clone .. . -r 1')])
-    assert_stack_eq(stack[-1], [('lcd', 'one'), ('local', 'pwd', 'addons_path_adder')])
+    tools._process('checkout')
+    output = subprocess.check_output(['git', '--git-dir=instance/addons/one/.git', 'rev-parse', '--short', 'HEAD']).strip()
+    t.eq_(output, "e3224b1")
 
 
+@t.with_setup(_prepare, _cleanup)
 @t.with_setup(_multi_addons_cfg)
 def test_multi_addons():
-    stack = tools._process_addons('checkout')
-    assert_stack_eq(stack[-2], [('lcd', 'two'), ('local', 'pwd'), ('local', 'git clone .. . ')])
-    assert_stack_eq(stack[-1], [('lcd', 'two/tests'), ('local', 'pwd', 'addons_path_adder')])
+    tools._process('checkout')
+    assert os.path.exists('instance/addons/one/EXISTS')
+    assert os.path.exists('instance/addons/two/EXISTS')
+
+@t.with_setup(_prepare, _cleanup)
+@t.with_setup(_arbitrary_addon_cfg)
+def test_arbitrary_addon():
+    tools._process('checkout')
+    assert ('%s/tests/addons' % tools.ROOT) in tools.addons_path
