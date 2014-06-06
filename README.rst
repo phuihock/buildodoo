@@ -31,15 +31,16 @@ Edit ``instance.cfg``. Example::
            web [addons]
            pentaho-reports [openerp_addon]  ; add subdir 'openerp_addon' to addons_path
            custom [.]  ; grouping of multiple standalone addons is possible, add 'custom' to addons_path
+           . [addons]  ; arbitrary path to add to the addons_path
 
   [repo]
-  server = ~/Work/lp/openobject-server/7.0 [bzr]
-  7.0 = ~/Work/lp/openobject-addons/7.0 [bzr]
-  web = ~/Work/lp/openerp-web/7.0 [bzr]
-  pentaho-reports = ~/Work/lp/extras/Pentaho-reports-for-OpenERP [git]
-  custom = ~/Work/lp/custom/hr_roster [bzr]
-           ~/Work/lp/custom/hr_employment [bzr]
-           ~/Work/lp/custom/hr_work_day [bzr]
+  server = ../openobject-server/7.0 [bzr]
+  7.0 = ../openobject-addons/7.0 [bzr]
+  web = ../openerp-web/7.0 [bzr]
+  pentaho-reports = ../extras/Pentaho-reports-for-OpenERP [git]
+  custom = ../custom/hr_roster [bzr]
+           ../custom/hr_employment [bzr]
+           ../custom/hr_work_day [bzr]
            
   [revisions]
   ~/Work/lp/openerp-web/7.0 = last:1
