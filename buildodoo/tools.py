@@ -27,15 +27,16 @@ class Collector(list):
 
 def process_repo(op, name, repo_name, repo_spec, stack, collector=None, multiline=False):
     mo = SPEC.match(repo_spec)
-    if mo:
-        repo, _, protocol = [g.strip() for g in mo.groups()]
-        repo = os.path.join(ROOT, repo)
+    if not mo:
+        return
 
+    repo, _, protocol = [g.strip() for g in mo.groups()]
     if config.has_option('revisions', repo):
         rev = config.get('revisions', repo)
     else:
         rev = vcs.revisions['last:1'].get(protocol)
 
+    repo = os.path.normpath(os.path.join(ROOT, repo))
     cmd = vcs.commands[op]
     if multiline:
         repo_name = os.path.join(repo_name, os.path.basename(repo))
